@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escalator Passenger Flow Simulator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f6f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1500px; /* Adjusted for wider layout */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            font-weight: 600;
+        }
+
+        .main-content-area {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            gap: 25px; /* Increased gap */
+            margin-bottom: 30px;
+        }
+
+        #controls-panel {
+            flex: 0 0 320px; /* Slightly wider controls panel */
+            padding: 25px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.95em;
+            color: #555;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px; /* Space before value */
+        }
+
+        .control-group select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+            background-color: #fff;
+        }
+        
+        .control-group .value-display { /* For values below sliders */
+            font-size: 0.9em;
+            color: #333;
+            text-align: right; /* Match mockup */
+            margin-top: -2px; /* Fine-tune positioning */
+        }
+
+
+        #resetButton {
+            padding: 12px 18px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+            width: 100%; /* Button takes full width of its container */
+            margin-top: 10px;
+        }
+
+        #resetButton:hover {
+            background-color: #2980b9;
+        }
+
+        #canvas-container {
+            flex: 1; /* Canvas takes up available middle space */
+            min-width: 400px; /* Ensure canvas has some space */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden; /* Ensure canvas fits if too large initially */
+        }
+        #escalatorCanvas {
+            /* Styles for canvas itself if needed, usually size is set by JS */
+        }
+
+
+        #stats-panel {
+            flex: 0 0 280px; /* Width of stats panel */
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two columns for stat items */
+            gap: 15px;
+            align-content: flex-start; /* Align items to the top */
+        }
+
+        .stat-item {
+            background-color: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically */
+            min-height: 70px; /* Ensure consistent height */
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+        }
+        .stat-value.small-unit {
+            font-size: 0.8em;
+            font-weight: normal;
+            color: #555;
+            margin-left: 3px;
+        }
+
+
+        #about-simulator {
+            width: 100%;
+            max-width: calc(320px + 25px + 400px + 25px + 280px); /*Approx sum of columns and gaps*/
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        #about-simulator h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.4em;
+            margin-bottom: 10px;
+        }
+        #about-simulator p, #about-simulator ul {
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #444;
+            margin-bottom: 10px;
+        }
+         #about-simulator ul {
+            padding-left: 20px;
+            margin-top:0;
+        }
+        #about-simulator strong {
+            color: #333;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <h1>Escalator Passenger Flow Simulator</h1>
+
+        <div class="main-content-area">
+            <div id="controls-panel">
+                <div class="control-group">
+                    <label for="arrivalRate">Arrival Rate (passengers/sec)</label>
+                    <input type="range" id="arrivalRate" min="0.1" max="10" step="0.1" value="2">
+                    <div class="value-display"><span id="arrivalRateValUI">2.0</span></div>
+                </div>
+                <div class="control-group">
+                    <label for="walkerPercentage">Walker Percentage (%)</label>
+                    <input type="range" id="walkerPercentage" min="0" max="100" step="1" value="70">
+                    <div class="value-display"><span id="walkerPercentageValUI">70</span>%</div>
+                </div>
+                <div class="control-group">
+                    <label for="escalatorLength">Escalator Length (slots)</label>
+                    <input type="range" id="escalatorLength" min="10" max="50" step="1" value="20">
+                    <div class="value-display"><span id="escalatorLengthValUI">20</span></div>
+                </div>
+                <div class="control-group">
+                    <label for="escalatorSpeed">Escalator Speed (slots/sec)</label>
+                    <input type="range" id="escalatorSpeed" min="0.5" max="3" step="0.1" value="1">
+                    <div class="value-display"><span id="escalatorSpeedValUI">1.0</span></div>
+                </div>
+                <div class="control-group">
+                    <label for="walkingSpeedBoost">Walker Speed Boost (slots/sec)</label>
+                    <input type="range" id="walkingSpeedBoost" min="0.1" max="3" step="0.1" value="1">
+                    <div class="value-display"><span id="walkingSpeedBoostValUI">1.0</span></div>
+                </div>
+                <div class="control-group">
+                    <label for="walkerMinSpacing">Walker Min Spacing (slots)</label>
+                    <input type="range" id="walkerMinSpacing" min="1" max="5" step="0.1" value="2">
+                    <div class="value-display"><span id="walkerMinSpacingValUI">2</span></div>
+                </div>
+                <div class="control-group">
+                    <label for="policy">Escalator Policy</label>
+                    <select id="policy">
+                        <option value="WS">Walk Left, Stand Right</option>
+                        <option value="SS">Stand Both Lanes</option>
+                    </select>
+                </div>
+                 <div class="control-group"> <!-- Button container -->
+                    <button id="resetButton">Reset Simulation</button>
+                </div>
+            </div>
+
+            <div id="canvas-container">
+                <canvas id="escalatorCanvas"></canvas>
+            </div>
+
+            <div id="stats-panel">
+                <div class="stat-item">
+                    <div class="stat-label">Time (s)</div>
+                    <div class="stat-value" id="timeVal">0.00</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Queued</div>
+                    <div class="stat-value" id="queuedVal">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">On Escalator</div>
+                    <div class="stat-value" id="onEscalatorVal">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Exited</div>
+                    <div class="stat-value" id="exitedVal">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Throughput</div>
+                    <div><span class="stat-value" id="throughputVal">0.00</span><span class="stat-value small-unit"> p/s</span></div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg Walker Speed</div>
+                    <div><span class="stat-value" id="avgWalkerSpeedVal">0.00</span><span class="stat-value small-unit"> s/s</span></div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg Stander Speed</div>
+                    <div><span class="stat-value" id="avgStanderSpeedVal">0.00</span><span class="stat-value small-unit"> s/s</span></div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg Overall Speed</div>
+                    <div><span class="stat-value" id="avgOverallSpeedVal">0.00</span><span class="stat-value small-unit"> s/s</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="about-simulator">
+            <h2>About the Simulator</h2>
+            <p>This simulator demonstrates the dynamics of passenger flow on escalators under different policies and conditions. You can adjust various parameters to see how they affect throughput and passenger experience.</p>
+            <ul>
+                <li><strong>Walk Left, Stand Right (WS) Policy:</strong> Walkers use the left lane while standers use the right lane. Passengers who are originally walkers will attempt to maintain 'Walker Min Spacing' when boarding either lane.</li>
+                <li><strong>Stand Both Lanes (SS) Policy:</strong> All passengers stand on either lane of the escalator, maintaining 1-slot spacing.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('escalatorCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Parameters ---
+        let arrivalRate = 2;
+        let walkerPercentage = 0.70;
+        let escalatorLength = 20;
+        let escalatorSpeed = 1;
+        let walkingSpeedBoost = 1;
+        let walkerMinSpacing = 2;
+        let policy = 'WS';
+
+        // --- Simulation State ---
+        let passengers = [];
+        let queue = [];
+        let exitedCount = 0;
+        let simulationTime = 0;
+        let passengerIdCounter = 0;
+
+
+        // --- Canvas & Drawing Constants ---
+        const SLOT_SIZE = 20; 
+        const LANE_WIDTH = 40;
+        const LANE_GAP = 5;
+        const QUEUE_AREA_WIDTH = 80; 
+        const PASSENGER_RADIUS = SLOT_SIZE / 3; 
+        const CANVAS_PADDING_TOP_BOTTOM = 20;
+        const CANVAS_PADDING_SIDES = 10;
+
+
+        function setCanvasDimensions() {
+            const simWidth = QUEUE_AREA_WIDTH + (LANE_WIDTH * 2) + LANE_GAP + (LANE_WIDTH / 2); 
+            canvas.width = simWidth + CANVAS_PADDING_SIDES * 2;
+            canvas.height = escalatorLength * SLOT_SIZE + CANVAS_PADDING_TOP_BOTTOM * 2;
+        }
+
+
+        const controls = {
+            arrivalRate: document.getElementById('arrivalRate'),
+            walkerPercentage: document.getElementById('walkerPercentage'),
+            escalatorLength: document.getElementById('escalatorLength'),
+            escalatorSpeed: document.getElementById('escalatorSpeed'),
+            walkingSpeedBoost: document.getElementById('walkingSpeedBoost'),
+            walkerMinSpacing: document.getElementById('walkerMinSpacing'),
+            policy: document.getElementById('policy'),
+            resetButton: document.getElementById('resetButton')
+        };
+
+        const valSpansUI = {
+            arrivalRateValUI: document.getElementById('arrivalRateValUI'),
+            walkerPercentageValUI: document.getElementById('walkerPercentageValUI'),
+            escalatorLengthValUI: document.getElementById('escalatorLengthValUI'),
+            escalatorSpeedValUI: document.getElementById('escalatorSpeedValUI'),
+            walkingSpeedBoostValUI: document.getElementById('walkingSpeedBoostValUI'),
+            walkerMinSpacingValUI: document.getElementById('walkerMinSpacingValUI')
+        };
+
+        const statsSpans = {
+            timeVal: document.getElementById('timeVal'),
+            queuedVal: document.getElementById('queuedVal'),
+            onEscalatorVal: document.getElementById('onEscalatorVal'),
+            exitedVal: document.getElementById('exitedVal'),
+            throughputVal: document.getElementById('throughputVal'),
+            avgWalkerSpeedVal: document.getElementById('avgWalkerSpeedVal'),
+            avgStanderSpeedVal: document.getElementById('avgStanderSpeedVal'),
+            avgOverallSpeedVal: document.getElementById('avgOverallSpeedVal')
+        };
+
+        function updateParamsFromUI() {
+            arrivalRate = parseFloat(controls.arrivalRate.value);
+            walkerPercentage = parseInt(controls.walkerPercentage.value) / 100;
+            const newEscalatorLength = parseInt(controls.escalatorLength.value);
+            if (newEscalatorLength !== escalatorLength) {
+                escalatorLength = newEscalatorLength;
+                setCanvasDimensions(); 
+            }
+            escalatorSpeed = parseFloat(controls.escalatorSpeed.value);
+            walkingSpeedBoost = parseFloat(controls.walkingSpeedBoost.value);
+            walkerMinSpacing = parseFloat(controls.walkerMinSpacing.value);
+            policy = controls.policy.value;
+
+            valSpansUI.arrivalRateValUI.textContent = arrivalRate.toFixed(1);
+            valSpansUI.walkerPercentageValUI.textContent = (walkerPercentage * 100).toFixed(0);
+            valSpansUI.escalatorLengthValUI.textContent = escalatorLength;
+            valSpansUI.escalatorSpeedValUI.textContent = escalatorSpeed.toFixed(1);
+            valSpansUI.walkingSpeedBoostValUI.textContent = walkingSpeedBoost.toFixed(1);
+            valSpansUI.walkerMinSpacingValUI.textContent = walkerMinSpacing.toFixed(1);
+        }
+        
+        Object.values(controls).forEach(control => {
+            if (control.tagName === 'INPUT' || control.tagName === 'SELECT') {
+                control.addEventListener('input', updateParamsFromUI);
+                control.addEventListener('change', updateParamsFromUI);
+            }
+        });
+        controls.resetButton.addEventListener('click', resetSimulation);
+
+        class Passenger {
+            constructor(id, isWalkerOriginal) {
+                this.id = id;
+                this.isWalkerOriginal = isWalkerOriginal;
+                this.isWalker = isWalkerOriginal; // Current behavioral state
+                this.lane = -1; 
+                this.position = 0; 
+                this.color = isWalkerOriginal ? '#3498db' : '#2ecc71'; 
+                this.currentSpeed = 0;
+                this.shufflingCooldown = 0; 
+            }
+
+            calculateTargetSpeedInLane(lane) {
+                if (lane === -1) return 0;
+                if (policy === 'SS') {
+                    this.isWalker = false; // Behaviorally a stander
+                    return escalatorSpeed;
+                } else { // WS Policy
+                    this.isWalker = this.isWalkerOriginal; // Behavior matches original preference
+                }
+
+                if (this.isWalker) { // True if original walker and WS policy
+                    if (lane === 0) { // Left lane
+                        return escalatorSpeed + walkingSpeedBoost;
+                    } else if (lane === 1) { // Right lane
+                        const { passenger: passengerAhead } = this.getPassengerAheadInLane(1);
+                        if (passengerAhead && !passengerAhead.isWalkerOriginal) { // If stander ahead in right lane
+                            return escalatorSpeed; // Forced to stand
+                        }
+                        return escalatorSpeed + walkingSpeedBoost; // Can walk in right lane
+                    }
+                }
+                return escalatorSpeed; // Stander speed
+            }
+            
+            getPassengerAheadInLane(lane) {
+                let minDistance = Infinity;
+                let passengerAhead = null;
+                for (const other of passengers) {
+                    if (other.id !== this.id && other.lane === lane && other.position > this.position) {
+                        const distance = other.position - this.position;
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            passengerAhead = other;
+                        }
+                    }
+                }
+                return { passenger: passengerAhead, distance: minDistance };
+            }
+
+            isSlotRangeFree(targetLane, startPos, endPos, forWalkerBehavior = false) {
+                 const effectiveEndPos = forWalkerBehavior ? endPos + walkerMinSpacing -1 : endPos; 
+                for (const p of passengers) {
+                    if (p.lane === targetLane) {
+                        const p_start = p.position - 0.49; 
+                        const p_end = p.position + 0.49;
+                        if (Math.max(startPos, p_start) < Math.min(effectiveEndPos, p_end)) {
+                            return false; 
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            attemptLaneShuffle(deltaTime) {
+                 if (policy !== 'WS' || !this.isWalkerOriginal || this.shufflingCooldown > 0) {
+                    if(this.shufflingCooldown > 0) this.shufflingCooldown -= deltaTime;
+                    return;
+                }
+
+                const currentIntendedSpeed = this.calculateTargetSpeedInLane(this.lane);
+                const significantlySlowed = this.currentSpeed < currentIntendedSpeed * 0.7; 
+
+                if (this.lane === 1 && (significantlySlowed || currentIntendedSpeed <= escalatorSpeed)) {
+                    if (this.isSlotRangeFree(0, this.position - 0.5, this.position + 0.5, true)) { 
+                        this.lane = 0; this.isWalker = true; 
+                        this.shufflingCooldown = 1.0; 
+                        return;
+                    }
+                }
+                else if (this.lane === 0 && significantlySlowed) {
+                     if (this.isSlotRangeFree(1, this.position - 0.5, this.position + 0.5, false)) { 
+                        this.lane = 1; 
+                        this.shufflingCooldown = 1.0;
+                        return;
+                    }
+                }
+                if(this.shufflingCooldown > 0) this.shufflingCooldown -= deltaTime;
+            }
+
+
+            updateCurrentSpeedAndPosition(deltaTime) {
+                if (this.lane === -1) return; 
+
+                this.attemptLaneShuffle(deltaTime);
+
+                let intendedSpeed = this.calculateTargetSpeedInLane(this.lane);
+                let finalSpeed = intendedSpeed;
+                
+                const { passenger: passengerAhead, distance } = this.getPassengerAheadInLane(this.lane);
+                
+                let spacingToMaintain = 1.0; 
+                // this.isWalker is true if WS policy AND isWalkerOriginal
+                if (this.isWalker && intendedSpeed > escalatorSpeed) {
+                    spacingToMaintain = walkerMinSpacing;
+                }
+
+                if (passengerAhead && distance < spacingToMaintain) {
+                    let speedOfPassengerAhead = passengerAhead.currentSpeed;
+                    finalSpeed = Math.min(intendedSpeed, speedOfPassengerAhead * 0.95); 
+                    finalSpeed = Math.max(0, finalSpeed); 
+                    
+                    if (distance < spacingToMaintain * 0.5) finalSpeed = Math.min(finalSpeed, escalatorSpeed * 0.5); 
+                }
+                this.currentSpeed = finalSpeed;
+                this.position += this.currentSpeed * deltaTime;
+            }
+
+            draw(queueIndex) {
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                let x, y;
+                const escalatorBaseY = canvas.height - CANVAS_PADDING_TOP_BOTTOM - SLOT_SIZE / 2;
+
+                if (this.lane === -1) { 
+                    const passengersPerRow = Math.floor(QUEUE_AREA_WIDTH / (PASSENGER_RADIUS * 2.5));
+                    const row = Math.floor(queueIndex / passengersPerRow);
+                    const col = queueIndex % passengersPerRow;
+                    x = CANVAS_PADDING_SIDES + PASSENGER_RADIUS + col * (PASSENGER_RADIUS * 2.2);
+                    y = escalatorBaseY - PASSENGER_RADIUS - row * (PASSENGER_RADIUS * 2.2);
+                } else { 
+                    x = CANVAS_PADDING_SIDES + QUEUE_AREA_WIDTH + (this.lane * (LANE_WIDTH + LANE_GAP)) + LANE_WIDTH / 2;
+                    y = escalatorBaseY - (this.position * SLOT_SIZE);
+                }
+                ctx.arc(x, y, PASSENGER_RADIUS, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+
+        function resetSimulation() {
+            passengers = []; queue = []; exitedCount = 0; simulationTime = 0;
+            passengerIdCounter = 0;
+            updateParamsFromUI(); 
+            setCanvasDimensions(); 
+        }
+
+        function handleArrivals(deltaTime) {
+            const expectedPassengersThisFrame = arrivalRate * deltaTime;
+            let numToArriveThisFrame = Math.floor(expectedPassengersThisFrame);
+            
+            if (Math.random() < (expectedPassengersThisFrame - numToArriveThisFrame)) {
+                numToArriveThisFrame++;
+            }
+
+            for (let i = 0; i < numToArriveThisFrame; i++) {
+                if (queue.length < 150) { 
+                    queue.push(new Passenger(passengerIdCounter++, Math.random() < walkerPercentage));
+                }
+            }
+        }
+
+        // ***** MODIFIED FUNCTION *****
+        function canBoardLane(laneIndex, isPassengerWalkerOriginal = false) {
+            let spaceNeededAtEntry = 1.0;
+            // If WS policy AND the passenger attempting to board is an original walker,
+            // they need walkerMinSpacing to board *any* lane they are attempting.
+            if (policy === 'WS' && isPassengerWalkerOriginal) {
+                spaceNeededAtEntry = walkerMinSpacing;
+            }
+            // Otherwise (SS policy, or passenger is original stander in WS), 1.0 slot is needed.
+
+            for (const p of passengers) {
+                if (p.lane === laneIndex && p.position < spaceNeededAtEntry) {
+                    return false; // Not enough space at entry
+                }
+            }
+            return true; // Enough space
+        }
+
+        // ***** MODIFIED FUNCTION *****
+        function handleBoarding() {
+            if (queue.length === 0) return;
+            const passengerToBoard = queue[0];
+
+            if (policy === 'WS') {
+                if (passengerToBoard.isWalkerOriginal) { 
+                    // For original walkers, pass their 'isWalkerOriginal' status to canBoardLane
+                    if (canBoardLane(0, passengerToBoard.isWalkerOriginal)) { 
+                        const p = queue.shift(); p.lane = 0; p.position = 0; passengers.push(p); return;
+                    } else if (canBoardLane(1, passengerToBoard.isWalkerOriginal)) { // Walker tries right lane
+                        const p = queue.shift(); p.lane = 1; p.position = 0; passengers.push(p); return;
+                    }
+                } else { // Original stander
+                    // Original standers in WS only try right lane, with standard spacing
+                    if (canBoardLane(1, false)) { 
+                        const p = queue.shift(); p.lane = 1; p.position = 0; passengers.push(p); return;
+                    }
+                }
+            } else if (policy === 'SS') { 
+                // For SS, everyone boards with 1-slot spacing (isPassengerWalkerOriginal is false)
+                const leftLaneFree = canBoardLane(0, false);
+                const rightLaneFree = canBoardLane(1, false);
+                let targetLane = -1;
+
+                if (leftLaneFree && rightLaneFree) { 
+                     targetLane = (passengers.filter(p=>p.lane===0).length <= passengers.filter(p=>p.lane===1).length) ? 0 : 1;
+                } else if (leftLaneFree) {
+                    targetLane = 0;
+                } else if (rightLaneFree) {
+                    targetLane = 1;
+                }
+
+                if (targetLane !== -1) {
+                    const p = queue.shift();
+                    p.lane = targetLane;
+                    p.isWalker = false; // Behaviorally a stander in SS
+                    p.position = 0;
+                    passengers.push(p);
+                    return;
+                }
+            }
+        }
+
+        function updatePassengers(deltaTime) {
+            for (const p of passengers) {
+                 if (p.lane !== -1) p.updateCurrentSpeedAndPosition(deltaTime);
+            }
+
+            for (let i = passengers.length - 1; i >= 0; i--) {
+                const p = passengers[i];
+                if (p.position >= escalatorLength) {
+                    passengers.splice(i, 1);
+                    exitedCount++;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const escalatorBaseY = canvas.height - CANVAS_PADDING_TOP_BOTTOM;
+            const escalatorTopY = CANVAS_PADDING_TOP_BOTTOM;
+            const escalatorDrawLength = escalatorBaseY - escalatorTopY;
+
+            ctx.fillStyle = '#ecf0f1'; 
+            ctx.fillRect(CANVAS_PADDING_SIDES, escalatorTopY, QUEUE_AREA_WIDTH, escalatorDrawLength);
+            ctx.strokeStyle = '#bdc3c7'; 
+            ctx.strokeRect(CANVAS_PADDING_SIDES, escalatorTopY, QUEUE_AREA_WIDTH, escalatorDrawLength);
+            ctx.fillStyle = '#2c3e50'; ctx.textAlign = 'center';
+            ctx.fillText("Queue", CANVAS_PADDING_SIDES + QUEUE_AREA_WIDTH/2, escalatorTopY - 5);
+
+            const laneStartX = CANVAS_PADDING_SIDES + QUEUE_AREA_WIDTH;
+            ctx.fillStyle = '#e0e0e0'; 
+            ctx.fillRect(laneStartX, escalatorTopY, LANE_WIDTH, escalatorDrawLength);
+            ctx.strokeStyle = '#c0c0c0';
+            ctx.strokeRect(laneStartX, escalatorTopY, LANE_WIDTH, escalatorDrawLength);
+            ctx.fillRect(laneStartX + LANE_WIDTH + LANE_GAP, escalatorTopY, LANE_WIDTH, escalatorDrawLength);
+            ctx.strokeRect(laneStartX + LANE_WIDTH + LANE_GAP, escalatorTopY, LANE_WIDTH, escalatorDrawLength);
+
+            ctx.strokeStyle = '#cccccc';
+            for(let i=0; i < escalatorLength; i++) {
+                const y = escalatorBaseY - i * SLOT_SIZE - SLOT_SIZE;
+                if (y < escalatorTopY - SLOT_SIZE/2) continue; 
+                 if (y > escalatorBaseY + SLOT_SIZE/2) continue; 
+
+                ctx.beginPath(); ctx.moveTo(laneStartX, y); ctx.lineTo(laneStartX + LANE_WIDTH, y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(laneStartX + LANE_WIDTH + LANE_GAP, y); ctx.lineTo(laneStartX + LANE_WIDTH + LANE_GAP + LANE_WIDTH, y); ctx.stroke();
+            }
+            
+            const exitAreaX = laneStartX + (LANE_WIDTH * 2) + LANE_GAP;
+            const exitAreaWidth = LANE_WIDTH / 2;
+            ctx.fillStyle = '#ecf0f1';
+            ctx.fillRect(exitAreaX, escalatorTopY, exitAreaWidth, escalatorDrawLength);
+            ctx.strokeStyle = '#bdc3c7';
+            ctx.strokeRect(exitAreaX, escalatorTopY, exitAreaWidth, escalatorDrawLength);
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillText("Exit", exitAreaX + exitAreaWidth/2 , escalatorTopY - 5);
+
+
+            queue.forEach((p, idx) => p.draw(idx));
+            passengers.forEach(p => p.draw());
+
+            statsSpans.timeVal.textContent = simulationTime.toFixed(2);
+            statsSpans.queuedVal.textContent = queue.length;
+            statsSpans.onEscalatorVal.textContent = passengers.length;
+            statsSpans.exitedVal.textContent = exitedCount;
+            const throughput = simulationTime > 1 ? (exitedCount / simulationTime).toFixed(2) : "0.00"; 
+            statsSpans.throughputVal.textContent = throughput;
+
+            let totalWalkerSpeed = 0, walkerCount = 0;
+            let totalStanderSpeed = 0, standerCount = 0;
+            let totalOverallSpeed = 0;
+            
+            let onEscalatorCount = 0;
+            if (passengers.length > 0) {
+                for (const p of passengers) {
+                    if (p.lane !== -1) { 
+                        onEscalatorCount++;
+                        totalOverallSpeed += p.currentSpeed;
+                        if (p.isWalkerOriginal) {
+                            totalWalkerSpeed += p.currentSpeed;
+                            walkerCount++;
+                        } else {
+                            totalStanderSpeed += p.currentSpeed;
+                            standerCount++;
+                        }
+                    }
+                }
+            }
+            statsSpans.avgWalkerSpeedVal.textContent = walkerCount > 0 ? (totalWalkerSpeed / walkerCount).toFixed(2) : "0.00";
+            statsSpans.avgStanderSpeedVal.textContent = standerCount > 0 ? (totalStanderSpeed / standerCount).toFixed(2) : "0.00";
+            statsSpans.avgOverallSpeedVal.textContent = onEscalatorCount > 0 ? (totalOverallSpeed / onEscalatorCount).toFixed(2) : "0.00";
+        }
+
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp; 
+            const deltaTime = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            if (!isNaN(deltaTime) && deltaTime > 0 && deltaTime < 0.2) { 
+                simulationTime += deltaTime;
+                handleArrivals(deltaTime); 
+                handleBoarding(); 
+                handleBoarding(); 
+                updatePassengers(deltaTime);
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        updateParamsFromUI(); 
+        resetSimulation();    
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
